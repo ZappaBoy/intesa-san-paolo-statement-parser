@@ -38,8 +38,14 @@ isparser --help
 
 ## Examples
 
-### Crawl mails
+### Parse single statement
 
 ``` shell
-isparser --file "path/to/file.pdf"
+isparser -f "path/to/file.pdf"
+```
+
+### Parse multiple statements
+
+``` shell
+isparser -f "path/to/file.pdf" "path/to/second_file.pdf"
 ```

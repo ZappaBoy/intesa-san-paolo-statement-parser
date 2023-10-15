@@ -8,17 +8,24 @@ from isparser.shared.utils.logger import Logger
 
 __version__ = metadata.version(__package__ or __name__)
 
+from isparser.statement_parser import StatementParser
+
 
 class ISParser:
     def __init__(self):
         self.logger = Logger()
         self.args = self.parse_args()
         self.set_verbosity()
+        self.statement_parser = StatementParser()
 
     def run(self):
         self.check_args()
         self.logger.info(f"Running...")
         self.logger.debug(self.args)
+        for file in self.args.files:
+            self.logger.info(f"Processing file: {file}")
+            self.statement_parser.parse(file)
+        self.statement_parser.to_csv(self.args.output)
 
     @staticmethod
     def parse_args() -> Namespace:
@@ -32,16 +39,20 @@ class ISParser:
                             required=False, help='Do not print any output/log')
         parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}',
                             help='Show version and exit.')
-        parser.add_argument('--file', '-f', action='store', required=True,
-                            help='Statement PDF file to use')
+        parser.add_argument('--files', '-f', required=True, action='store',
+                            nargs='+', help='Statement PDF file(s) to use')
+
+        parser.add_argument('--output', '-o', required=False, action='store', default='./output.csv',
+                            help='Output CSV file path (Default: ./output.csv)')
 
         return parser.parse_args()
 
     def check_args(self) -> None:
-        error_message = None
-        if self.args.file is None or len(self.args.file) == 0 or not os.path.exists(self.args.file):
-            error_message = f"Incorrect input file: {self.args.file}"
-        if error_message:
+        error_message = ""
+        for file in self.args.files:
+            if not os.path.exists(file):
+                error_message += f"\nIncorrect input file: {file}"
+        if error_message is not "":
             self.logger.error(error_message)
             exit(1)
 
