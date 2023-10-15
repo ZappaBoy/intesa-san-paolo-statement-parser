@@ -1,0 +1,36 @@
+[tool.poetry]
+name = "isparser"
+version = "0.1.0"
+description = "isparser isparser is a simple parser made to extract and convert the Intesa San Paolo PDF bank statement to csv."
+authors = ["ZappaBoy <federico.zappone@justanother.cloud>"]
+maintainers = ["ZappaBoy <federico.zappone@justanother.cloud>"]
+readme = "README.md"
+packages = [{ include = "isparser" }]
+
+[tool.poetry.dependencies]
+python = ">=3.11,<3.12"
+pydantic = "^2.4.2"
+pandas = "^2.1.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.3.1"
+python-dotenv = "^1.0.0"
+poetry2setup = "^1.1.0"
+pytest-env = "^0.8.1"
+
+[tool.pytest.ini_options]
+addopts = "-s -v"
+pythonpath = [
+    "isparser"
+]
+env = [
+    "ENVIRONMENT=testing",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+test = "pytest:main"
+isparser = "isparser:main"
