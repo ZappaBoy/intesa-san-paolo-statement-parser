@@ -49,3 +49,9 @@ isparser -f "path/to/file.pdf"
 ``` shell
 isparser -f "path/to/file.pdf" "path/to/second_file.pdf"
 ```
+
+### Practical example
+
+```shell
+isparser -f your/statements/path/Estratto\ conto\ trimestrale* -o movements.csv
+```

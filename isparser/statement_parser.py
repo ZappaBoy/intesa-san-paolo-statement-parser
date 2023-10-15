@@ -69,7 +69,7 @@ class StatementParser:
                     next_line_exists = True
                     next_line = lines[index + 1]
                     while next_line_exists and re.match(starting_movement_pattern, next_line) is None:
-                        description += next_line
+                        description += " " + next_line
                         index += 1
                         if len(lines) <= index + 1:
                             next_line_exists = False
