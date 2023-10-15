@@ -29,9 +29,22 @@ class StatementParser:
                 movements: List[Movement] = self.extract_movements(page_content)
                 self.add_movements(movements)
 
-    def to_csv(self, filepath: str) -> None:
+    def to_csv(self, filepath: str, split: bool = False, only_positive: bool = False) -> None:
         self.logger.debug(f"Exporting to csv: {filepath}")
-        self.movements_df.to_csv(filepath, index=False)
+        if not filepath.endswith(".csv"):
+            filepath += ".csv"
+        if not split:
+            self.movements_df.to_csv(filepath, index=False)
+        else:
+            income_df = self.movements_df[self.movements_df["amount"] > 0]
+            outcome_df = self.movements_df[self.movements_df["amount"] < 0]
+            if only_positive:
+                outcome_df = outcome_df.assign(amount=outcome_df["amount"].abs())
+            income_filepath = filepath.replace(".csv", "_income.csv")
+            outcome_filepath = filepath.replace(".csv", "_outcome.csv")
+            income_df.to_csv(income_filepath, index=False)
+            outcome_df.to_csv(outcome_filepath, index=False)
+
 
     @staticmethod
     def exists_in_page(page: Any, text: str):

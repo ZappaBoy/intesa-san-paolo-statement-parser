@@ -25,7 +25,7 @@ class ISParser:
         for file in self.args.files:
             self.logger.info(f"Processing file: {file}")
             self.statement_parser.parse(file)
-        self.statement_parser.to_csv(self.args.output)
+        self.statement_parser.to_csv(self.args.output, split=self.args.split, only_positive=self.args.only_positive)
 
     @staticmethod
     def parse_args() -> Namespace:
@@ -41,10 +41,13 @@ class ISParser:
                             help='Show version and exit.')
         parser.add_argument('--files', '-f', required=True, action='store',
                             nargs='+', help='Statement PDF file(s) to use')
-
-        parser.add_argument('--output', '-o', required=False, action='store', default='./output.csv',
+        parser.add_argument('--output', '-o', required=False, action='store', default='./movements.csv',
                             help='Output CSV file path (Default: ./output.csv)')
-
+        parser.add_argument('--split', '-s', action=argparse.BooleanOptionalAction, required=False,
+                            default=False, help=f'Split income and outcome movements in multiple files. Default: False')
+        parser.add_argument('--only-positive', '-p', action=argparse.BooleanOptionalAction, required=False,
+                            default=False, help=f'If --split is used, convert income and outcome to only positive '
+                                                f'numbers. Default: False')
         return parser.parse_args()
 
     def check_args(self) -> None:
