@@ -12,12 +12,23 @@ from isparser.shared.utils.logger import Logger
 starting_movement_pattern = r'^\d{2}\.\d{2}\.\d{4}\s\d{2}\.\d{2}\.\d{4}.*'
 starting_movement_page_pattern = "Dettaglio movimenti del conto corrente"
 ending_movement_page_pattern = "Saldo finale al"
-bank_transfer_income_pattern = "Bonifico a Vostro favore"
-deposit_income_pattern = "Versamento"
+bank_transfer_income_pattern = r"^Bonifico a Vostro favore"
+deposit_income_pattern = r"^Versamento"
+payment_reversal_income_pattern = r"^Storno Pagamento Pos"
+
 income_patterns = [
     bank_transfer_income_pattern,
-    deposit_income_pattern
+    deposit_income_pattern,
+    payment_reversal_income_pattern
 ]
+
+page_index_text_pattern = r"Pagina \d{1,3} di \d{1,3}"
+movements_summary_pattern = r"^Totali"
+ignore_line_patterns = [
+    page_index_text_pattern,
+    movements_summary_pattern
+]
+
 
 class StatementParser:
     def __init__(self):
@@ -28,7 +39,7 @@ class StatementParser:
         self.logger.debug(f"Parsing {filepath}")
         with pdfplumber.open(filepath) as pdf:
             movements_starting_page_index, movements_ending_page_index = self.find_movements_pages(pdf)
-            for page_index in range(movements_starting_page_index, movements_ending_page_index):
+            for page_index in range(movements_starting_page_index, movements_ending_page_index + 1):
                 page_content = pdf.pages[page_index].extract_text()
                 movements: List[Movement] = self.extract_movements(page_content)
                 self.add_movements(movements)
@@ -49,7 +60,6 @@ class StatementParser:
             income_df.to_csv(income_filepath, index=False)
             outcome_df.to_csv(outcome_filepath, index=False)
 
-
     @staticmethod
     def exists_in_page(page: Any, text: str):
         return len(page.search(text)) > 0
@@ -68,8 +78,7 @@ class StatementParser:
                 return movements_starting_page_index, movements_ending_page_index
         raise MovementPagesNotFoundError()
 
-    @staticmethod
-    def extract_movements(page_content: str) -> List[Movement]:
+    def extract_movements(self, page_content: str) -> List[Movement]:
         movements: List[Movement] = []
         lines = page_content.splitlines()
         for index, line in enumerate(lines):
@@ -85,7 +94,9 @@ class StatementParser:
                 if len(lines) > index + 1:
                     next_line_exists = True
                     next_line = lines[index + 1]
-                    while next_line_exists and re.match(starting_movement_pattern, next_line) is None:
+
+                    while (next_line_exists and re.match(starting_movement_pattern, next_line) is None
+                           and not self.is_line_to_ignore(next_line)):
                         description += " " + next_line
                         index += 1
                         if len(lines) <= index + 1:
@@ -101,7 +112,7 @@ class StatementParser:
                 # TODO: add other income cases
                 income_amount = False
                 for income_pattern in income_patterns:
-                    if income_pattern in description:
+                    if re.match(income_pattern, description) is not None:
                         income_amount = True
                         break
                 if not income_amount:
@@ -114,3 +125,10 @@ class StatementParser:
         for movement in movements:
             self.movements_df.loc[len(self.movements_df)] = movement.model_dump(mode="json")
         self.movements_df.sort_values(by="date", inplace=True)
+
+    @staticmethod
+    def is_line_to_ignore(line: str) -> bool:
+        for ignore_line_pattern in ignore_line_patterns:
+            if re.match(ignore_line_pattern, line) is not None:
+                return True
+        return False
