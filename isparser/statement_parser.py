@@ -99,10 +99,13 @@ class StatementParser:
                               .replace(",", "."))
                 amount = float(raw_amount)
                 # TODO: add other income cases
+                income_amount = False
                 for income_pattern in income_patterns:
                     if income_pattern in description:
-                        amount = -amount
+                        income_amount = True
                         break
+                if not income_amount:
+                    amount = -amount
                 movement = Movement(date=date, amount=amount, description=description)
                 movements.append(movement)
         return movements
