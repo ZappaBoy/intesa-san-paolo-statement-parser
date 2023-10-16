@@ -1,5 +1,6 @@
 import argparse
 import importlib.metadata as metadata
+import logging
 import os
 from argparse import Namespace
 
@@ -55,7 +56,7 @@ class ISParser:
         for file in self.args.files:
             if not os.path.exists(file):
                 error_message += f"\nIncorrect input file: {file}"
-        if error_message is not "":
+        if error_message != "":
             self.logger.error(error_message)
             exit(1)
 
@@ -68,3 +69,4 @@ class ISParser:
             else:
                 verbosity_level = self.args.verbose
         self.logger.set_log_level(verbosity_level)
+        logging.getLogger("pdfminer").setLevel(logging.WARNING)

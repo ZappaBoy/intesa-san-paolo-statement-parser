@@ -12,13 +12,17 @@ from isparser.shared.utils.logger import Logger
 starting_movement_pattern = r'^\d{2}\.\d{2}\.\d{4}\s\d{2}\.\d{2}\.\d{4}.*'
 starting_movement_page_pattern = "Dettaglio movimenti del conto corrente"
 ending_movement_page_pattern = "Saldo finale al"
-income_pattern = "Bonifico a Vostro favore disposto da"
-
+bank_transfer_income_pattern = "Bonifico a Vostro favore"
+deposit_income_pattern = "Versamento"
+income_patterns = [
+    bank_transfer_income_pattern,
+    deposit_income_pattern
+]
 
 class StatementParser:
     def __init__(self):
         self.logger = Logger()
-        self.movements_df = pd.DataFrame(columns=["date", "description", "amount"])
+        self.movements_df = pd.DataFrame(columns=["date", "amount", "description"])
 
     def parse(self, filepath: str) -> None:
         self.logger.debug(f"Parsing {filepath}")
@@ -95,9 +99,11 @@ class StatementParser:
                               .replace(",", "."))
                 amount = float(raw_amount)
                 # TODO: add other income cases
-                if income_pattern not in description:
-                    amount = -amount
-                movement = Movement(date=date, description=description, amount=amount)
+                for income_pattern in income_patterns:
+                    if income_pattern in description:
+                        amount = -amount
+                        break
+                movement = Movement(date=date, amount=amount, description=description)
                 movements.append(movement)
         return movements
 
