@@ -82,17 +82,19 @@ isparser -f "path/to/file.pdf" -s
 ### Tag movements
 
 Tags are case-insensitive and can be used to classify movements. Tags are defined in a file or passed as arguments.
-Check `examples/example.tags.txt` for an example.
+Check `examples/example.tags.txt` for an example. Please note that regex can be written in various ways, to match what
+exactly you want.
+This examples tries to do a "robust" regex, feel free to improve the regex patterns as you want.
 
 ``` text
 # tags.txt file
 withdrawal=^Prelievo
-food_and_beverage=^Pagamento.*POS
+food_and_beverage=^Pagamento.*POS(?!.*AMAZON)
 rent=.*Vitto e Alloggio.*|.*Affitto.*
 tax=.*deleghe Fisco.*
 general_payment=^Bonifico da Voi disposto a favore di
 recurrent_payment=^Pagamento ADUE
-fees=^Canone|.*COMMISSIONI.*|^Costo
+fees=^Canone|.*COMMISSIONI.*|^Costo|^Imposta
 prepaid_card_recharge=^Ricarica carta prepagata
 ```
 

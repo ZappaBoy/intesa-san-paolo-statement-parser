@@ -91,7 +91,7 @@ class StatementParser:
                 raw_amount = columns[-1]
 
                 date = self.format_date(raw_date)
-                description = raw_description
+                description = raw_description.replace("*", "").strip()
 
                 if len(lines) > index + 1:
                     next_line_exists = True
