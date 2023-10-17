@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from typing import Any, Tuple, List
+from typing import Any, Tuple, List, Dict, Pattern
 
 import pandas as pd
 import pdfplumber
@@ -33,19 +33,21 @@ ignore_line_patterns = [
 class StatementParser:
     def __init__(self):
         self.logger = Logger()
-        self.movements_df = pd.DataFrame(columns=["date", "amount", "description"])
+        self.movements_df = pd.DataFrame(columns=["date", "amount", "description", "tags"])
 
-    def parse(self, filepath: str) -> None:
+    def parse(self, filepath: str, tag_patterns: Dict[str, Pattern] = None) -> None:
         self.logger.debug(f"Parsing {filepath}")
+        self.logger.debug(f"Using tag patterns {tag_patterns}")
         with pdfplumber.open(filepath) as pdf:
             movements_starting_page_index, movements_ending_page_index = self.find_movements_pages(pdf)
             for page_index in range(movements_starting_page_index, movements_ending_page_index + 1):
                 page_content = pdf.pages[page_index].extract_text()
-                movements: List[Movement] = self.extract_movements(page_content)
+                movements: List[Movement] = self.extract_movements(page_content, tag_patterns)
                 self.add_movements(movements)
 
     def to_csv(self, filepath: str, split: bool = False, only_positive: bool = False) -> None:
         self.logger.debug(f"Exporting to csv: {filepath}")
+        self.movements_df["tags"] = self.movements_df["tags"].apply(lambda x: "|".join(x))
         if not filepath.endswith(".csv"):
             filepath += ".csv"
         if not split:
@@ -78,7 +80,7 @@ class StatementParser:
                 return movements_starting_page_index, movements_ending_page_index
         raise MovementPagesNotFoundError()
 
-    def extract_movements(self, page_content: str) -> List[Movement]:
+    def extract_movements(self, page_content: str, tag_patterns: Dict[str, Pattern] = None) -> List[Movement]:
         movements: List[Movement] = []
         lines = page_content.splitlines()
         for index, line in enumerate(lines):
@@ -88,13 +90,12 @@ class StatementParser:
                 raw_description = " ".join(columns[2:-1])  # Skip the first two date columns and the last amount column
                 raw_amount = columns[-1]
 
-                date = datetime.strptime(raw_date, "%d.%m.%Y")
+                date = self.format_date(raw_date)
                 description = raw_description
 
                 if len(lines) > index + 1:
                     next_line_exists = True
                     next_line = lines[index + 1]
-
                     while (next_line_exists and re.match(starting_movement_pattern, next_line) is None
                            and not self.is_line_to_ignore(next_line)):
                         description += " " + next_line
@@ -104,22 +105,42 @@ class StatementParser:
                         else:
                             next_line = lines[index + 1]
 
-                raw_amount = (raw_amount
-                              .replace('\x19', '.')  # replace weird dot character
-                              .replace(".", "")
-                              .replace(",", "."))
-                amount = float(raw_amount)
-                # TODO: add other income cases
-                income_amount = False
-                for income_pattern in income_patterns:
-                    if re.match(income_pattern, description) is not None:
-                        income_amount = True
-                        break
-                if not income_amount:
-                    amount = -amount
-                movement = Movement(date=date, amount=amount, description=description)
+                amount = self.format_amount(raw_amount, description)
+                tags = self.extract_tags(description, tag_patterns)
+
+                movement = Movement(date=date, amount=amount, description=description, tags=tags)
                 movements.append(movement)
         return movements
+
+    @staticmethod
+    def format_date(raw_date: str) -> datetime:
+        return datetime.strptime(raw_date, "%d.%m.%Y")
+
+    @staticmethod
+    def format_amount(raw_amount: str, description: str) -> float:
+        raw_amount = (raw_amount
+                      .replace('\x19', '.')  # replace weird dot character
+                      .replace(".", "")
+                      .replace(",", "."))
+        amount = float(raw_amount)
+        # TODO: add other income cases
+        income_amount = False
+        for income_pattern in income_patterns:
+            if re.match(income_pattern, description) is not None:
+                income_amount = True
+                break
+        if not income_amount:
+            amount = -amount
+        return amount
+
+    @staticmethod
+    def extract_tags(description: str, tag_patterns: Dict[str, Pattern] = None) -> List[str]:
+        tags = []
+        if tag_patterns is not None:
+            for tag_name, tag_pattern in tag_patterns.items():
+                if re.match(tag_pattern, description) is not None:
+                    tags.append(tag_name)
+        return tags
 
     def add_movements(self, movements: List[Movement]) -> None:
         for movement in movements:

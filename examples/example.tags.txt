@@ -1,0 +1,8 @@
+withdrawal=^Prelievo
+food_and_beverage=^Pagamento.*POS
+rent=.*Vitto e Alloggio.*|.*Affitto.*
+tax=.*deleghe Fisco.*
+general_payment=^Bonifico da Voi disposto a favore di
+recurrent_payment=^Pagamento ADUE
+fees=^Canone|.*COMMISSIONI.*|^Costo
+prepaid_card_recharge=^Ricarica carta prepagata

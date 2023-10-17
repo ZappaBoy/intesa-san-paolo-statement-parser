@@ -33,7 +33,8 @@ isparser --help
 ```
 
 ```shell
-usage: isparser [-h] [--verbose] [--debug] [--quiet | --no-quiet | -q] [--version] --files FILES [FILES ...] [--output OUTPUT] [--split | --no-split | -s] [--only-positive | --no-only-positive | -p]
+usage: isparser [-h] [--verbose] [--debug] [--quiet | --no-quiet | -q] [--version] --files FILES [FILES ...] [--output OUTPUT] [--tag-file TAG_FILE [TAG_FILE ...]] [--tag TAG [TAG ...]]
+                [--split | --no-split | -s] [--only-positive | --no-only-positive | -p]
 
 isparser is a simple parser made to extract and convert the Intesa San Paolo PDF bank statement to csv.
 
@@ -48,6 +49,10 @@ options:
                         Statement PDF file(s) to use
   --output OUTPUT, -o OUTPUT
                         Output CSV file path (Default: ./output.csv)
+  --tag-file TAG_FILE [TAG_FILE ...], -tf TAG_FILE [TAG_FILE ...]
+                        File(s) containing key-value tags to use for movements classification.
+  --tag TAG [TAG ...], -t TAG [TAG ...]
+                        Key-value (Format: string=regex) tags to use for movements classification. (e.g. -t "tag1=value1|value2")
   --split, --no-split, -s
                         Split income and outcome movements in multiple files. Default: False
   --only-positive, --no-only-positive, -p
@@ -74,8 +79,32 @@ isparser -f "path/to/file.pdf" "path/to/second_file.pdf"
 isparser -f "path/to/file.pdf" -s
 ```
 
+### Tag movements
+
+Tags are case-insensitive and can be used to classify movements. Tags are defined in a file or passed as arguments.
+Check `examples/example.tags.txt` for an example.
+
+``` text
+# tags.txt file
+withdrawal=^Prelievo
+food_and_beverage=^Pagamento.*POS
+rent=.*Vitto e Alloggio.*|.*Affitto.*
+tax=.*deleghe Fisco.*
+general_payment=^Bonifico da Voi disposto a favore di
+recurrent_payment=^Pagamento ADUE
+fees=^Canone|.*COMMISSIONI.*|^Costo
+prepaid_card_recharge=^Ricarica carta prepagata
+```
+
+``` shell
+isparser -f "path/to/file.pdf --tag-file tags.txt
+# or
+isparser -f "path/to/file.pdf --tag "tag1=value1|value2" "tag2=value3"
+```
+
+
 ### Practical example
 
 ```shell
-isparser -f your/statements/path/Estratto\ conto\ trimestrale* -o movements.csv --split --only-positive
+isparser -f your/statements/path/Estratto\ conto\ trimestrale* -o movements.csv --split --only-positive --tag-file tags.txt
 ```
