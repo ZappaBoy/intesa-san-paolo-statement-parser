@@ -34,7 +34,7 @@ class ISParser:
     @staticmethod
     def parse_args() -> Namespace:
         parser = argparse.ArgumentParser(description="isparser is a simple parser made to extract and convert the "
-                                                     "Intesa San Paolo PDF bank statement to csv.")
+                                                     "Intesa San Paolo bank account documents to csv.")
         parser.add_argument('--verbose', '-v', action='count', default=1,
                             help='Increase verbosity. Use more than once to increase verbosity level (e.g. -vvv).')
         parser.add_argument('--debug', action='store_true', default=False,
@@ -44,7 +44,7 @@ class ISParser:
         parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}',
                             help='Show version and exit.')
         parser.add_argument('--files', '-f', required=True, action='store',
-                            nargs='+', help='Statement PDF file(s) to use')
+                            nargs='+', help='Statement/Movements PDF/XLSX file(s) to use')
         parser.add_argument('--output', '-o', required=False, action='store', default='./movements.csv',
                             help='Output CSV file path (Default: ./output.csv)')
         parser.add_argument('--tag-file', '-tf', required=False, action='store',

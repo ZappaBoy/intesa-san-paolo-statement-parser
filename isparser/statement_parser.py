@@ -38,12 +38,39 @@ class StatementParser:
     def parse(self, filepath: str, tag_patterns: Dict[str, Pattern] = None) -> None:
         self.logger.debug(f"Parsing {filepath}")
         self.logger.debug(f"Using tag patterns {tag_patterns}")
+        # The following check can be improved using python-magic or the file unix command but in this case is probably
+        # an overkill
+        is_pdf_file = filepath.lower().endswith('.pdf')
+        if is_pdf_file:
+            self.parse_pdf(filepath, tag_patterns)
+        else:
+            self.parse_xlsx(filepath, tag_patterns)
+
+    def parse_pdf(self, filepath: str, tag_patterns: Dict[str, Pattern] = None) -> None:
         with pdfplumber.open(filepath) as pdf:
             movements_starting_page_index, movements_ending_page_index = self.find_movements_pages(pdf)
             for page_index in range(movements_starting_page_index, movements_ending_page_index + 1):
                 page_content = pdf.pages[page_index].extract_text()
                 movements: List[Movement] = self.extract_movements(page_content, tag_patterns)
                 self.add_movements(movements)
+
+    def parse_xlsx(self, filepath: str, tag_patterns: Dict[str, Pattern] = None) -> None:
+        df = pd.read_excel(filepath, header=None,
+                           names=['date', 'operation', 'description', 'account', 'accounted_status', 'category',
+                                  'currency', 'amount'])
+
+        df = df[df['date'].apply(isinstance, args=[datetime])]
+
+        movements: List[Movement] = []
+
+        for index, row in df.iterrows():
+            amount = row['amount']
+            description = row['description']
+            date = row['date']
+            movement = self.build_movement(date, amount, description, tag_patterns)
+            movements.append(movement)
+
+        self.add_movements(movements)
 
     def to_csv(self, filepath: str, split: bool = False, only_positive: bool = False) -> None:
         self.logger.debug(f"Exporting to csv: {filepath}")
@@ -88,7 +115,7 @@ class StatementParser:
                 columns = line.split()
                 raw_date = columns[0]
                 raw_description = " ".join(columns[2:-1])  # Skip the first two date columns and the last amount column
-                raw_amount = columns[-1]
+                amount = columns[-1]
 
                 date = self.format_date(raw_date)
                 description = raw_description.replace("*", "").strip()
@@ -104,13 +131,14 @@ class StatementParser:
                             next_line_exists = False
                         else:
                             next_line = lines[index + 1]
-
-                amount = self.format_amount(raw_amount, description)
-                tags = self.extract_tags(description, tag_patterns)
-
-                movement = Movement(date=date, amount=amount, description=description, tags=tags)
+                movement = self.build_movement(date, amount, description, tag_patterns)
                 movements.append(movement)
         return movements
+
+    def build_movement(self, date, amount, description, tag_patterns):
+        amount = self.format_amount(str(amount), description)
+        tags = self.extract_tags(description, tag_patterns)
+        return Movement(date=date, amount=amount, description=description, tags=tags)
 
     @staticmethod
     def format_date(raw_date: str) -> datetime:
