@@ -74,20 +74,59 @@ class StatementParser:
 
     def to_csv(self, filepath: str, split: bool = False, only_positive: bool = False) -> None:
         self.logger.debug(f"Exporting to csv: {filepath}")
-        self.movements_df["tags"] = self.movements_df["tags"].apply(lambda x: "|".join(x))
-        if not filepath.endswith(".csv"):
-            filepath += ".csv"
+        extension = '.csv'
+        filepath = self.check_filepath_extension(filepath, extension)
+        self.format_movements()
         if not split:
-            self.movements_df.to_csv(filepath, index=False)
+            self.save_csv(self.movements_df, filepath)
         else:
-            income_df = self.movements_df[self.movements_df["amount"] > 0]
-            outcome_df = self.movements_df[self.movements_df["amount"] < 0]
-            if only_positive:
-                outcome_df = outcome_df.assign(amount=outcome_df["amount"].abs())
-            income_filepath = filepath.replace(".csv", "_income.csv")
-            outcome_filepath = filepath.replace(".csv", "_outcome.csv")
-            income_df.to_csv(income_filepath, index=False)
-            outcome_df.to_csv(outcome_filepath, index=False)
+            income_df, outcome_df = self.get_split_movements(only_positive)
+            income_filepath, outcome_filepath = self.get_split_filepaths(filepath, extension)
+            self.save_csv(income_df, income_filepath)
+            self.save_csv(outcome_df, outcome_filepath)
+
+    def to_json(self, filepath: str, split: bool = False, only_positive: bool = False) -> None:
+        self.logger.debug(f"Exporting to json: {filepath}")
+        extension = '.json'
+        filepath = self.check_filepath_extension(filepath, extension)
+        self.format_movements()
+        if not split:
+            self.save_json(self.movements_df, filepath)
+        else:
+            income_df, outcome_df = self.get_split_movements(only_positive)
+            income_filepath, outcome_filepath = self.get_split_filepaths(filepath, extension)
+            self.save_json(income_df, income_filepath)
+            self.save_json(outcome_df, outcome_filepath)
+
+    @staticmethod
+    def save_csv(df: pd.DataFrame, filepath: str) -> None:
+        df.to_csv(filepath, index=False)
+
+    @staticmethod
+    def save_json(df: pd.DataFrame, filepath: str) -> None:
+        df.to_json(filepath, orient='records', index=False)
+
+    def get_split_movements(self, only_positive) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        income_df = self.movements_df[self.movements_df["amount"] > 0]
+        outcome_df = self.movements_df[self.movements_df["amount"] < 0]
+        if only_positive:
+            outcome_df = outcome_df.assign(amount=outcome_df["amount"].abs())
+        return income_df, outcome_df
+
+    @staticmethod
+    def get_split_filepaths(filepath, extension) -> Tuple[str, str]:
+        income_filepath = filepath.replace(extension, f"_income{extension}")
+        outcome_filepath = filepath.replace(extension, f"_outcome{extension}")
+        return income_filepath, outcome_filepath
+
+    def format_movements(self):
+        self.movements_df["tags"] = self.movements_df["tags"].apply(lambda x: "|".join(x))
+
+    @staticmethod
+    def check_filepath_extension(filepath, extension) -> str:
+        if not filepath.endswith(extension):
+            filepath += extension
+        return filepath
 
     @staticmethod
     def exists_in_page(page: Any, text: str):

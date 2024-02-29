@@ -29,7 +29,11 @@ class ISParser:
         for file in self.args.files:
             self.logger.info(f"Processing file: {file}")
             self.statement_parser.parse(file, tag_patterns=tag_patterns)
-        self.statement_parser.to_csv(self.args.output, split=self.args.split, only_positive=self.args.only_positive)
+        if self.args.json:
+            self.statement_parser.to_json(self.args.output, split=self.args.split,
+                                          only_positive=self.args.only_positive)
+        else:
+            self.statement_parser.to_csv(self.args.output, split=self.args.split, only_positive=self.args.only_positive)
 
     @staticmethod
     def parse_args() -> Namespace:
@@ -57,6 +61,8 @@ class ISParser:
         parser.add_argument('--only-positive', '-p', action=argparse.BooleanOptionalAction, required=False,
                             default=False, help=f'If --split is used, convert income and outcome to only positive '
                                                 f'numbers. Default: False')
+        parser.add_argument('--json', '-j', action=argparse.BooleanOptionalAction, required=False,
+                            default=False, help=f'Save in JSON format. Default: False')
         return parser.parse_args()
 
     def check_args(self) -> None:
